@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "DM_SANS-regular";
+  src: url("../public/Fonts/DM_Sans/DMSans-Regular.ttf");
+  font-style: "Dm_SANS_italic";
+  src: url("../public/Fonts/DM_Sans/DMSans-Bold.ttf");
+}
+
+@font-face {
+  font-family: "poppins";
+  src: url("../public/Fonts/Poppins/Poppins-Regular.ttf");
+}
+
+@font-face {
+  font-family: "montserrat";
+  src: url("../public//Fonts/Montserrat/static/Montserrat-Regular.ttf");
+}
+
+@font-face {
+  font-family: "roboto";
+  src: url("../public/Fonts/Roboto/Roboto-Regular.ttf");
+}
+
+@font-face {
+  font-family: "abel";
+  src: url("../public/Fonts/Abel/Abel-Regular.ttf");
+}
+
+.active {
+  border-bottom: 2px solid #20e58f;
+}
