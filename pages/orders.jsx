@@ -3,23 +3,17 @@ import Navbar from "../components/Navbar/Navbar";
 import { useSelector } from "react-redux";
 import OrderComponent from "../components/OrderComponent/OrderComponent";
 import { db } from "../firebase";
-// Firebase imports
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { 
-  getFirestore, 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  orderBy,
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
   serverTimestamp,
-  connectFirestoreEmulator 
 } from "firebase/firestore";
-
 // Firebase configuration
 // const firebaseConfig = {
 //   apiKey: "AIzaSyB0mvAaGlZl9_-TPHLe_Cgkofhlvj64rdc",
