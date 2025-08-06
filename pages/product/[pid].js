@@ -12,7 +12,8 @@ import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 
 const InduvialPost = (props) => {
   const { loadedProduct } = props;
-
+const dispatch = useDispatch();
+  const [stars, setStars] = useState(0);
   if (!loadedProduct) {
     return <p className="text-center mt-10">Product not found</p>;
   }
@@ -28,8 +29,7 @@ const InduvialPost = (props) => {
     productOwnerName,
   } = loadedProduct;
 
-  const dispatch = useDispatch();
-  const [stars, setStars] = useState(0);
+  
 
   const closeFeedBack = () => {
     setStars(0);
