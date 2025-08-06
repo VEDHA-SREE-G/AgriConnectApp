@@ -1,14 +1,12 @@
 /** @type {import('next').NextConfig} */
-const withPWA = require("next-pwa");
-
-const prod = process.env.NODE_ENV === "production";
-
-module.exports = withPWA({
-  dest: "public",            // ✅ moved out of `pwa: {}`
-  register: true,            // ✅ directly here
+const withPWA = require("next-pwa")({
+  dest: "public",
+  register: true,
   skipWaiting: true,
-  disable: prod ? false : true,
+  disable: process.env.NODE_ENV !== "production", // disabled in dev
+});
 
+const nextConfig = {
   reactStrictMode: false,
   images: {
     domains: [
@@ -22,4 +20,6 @@ module.exports = withPWA({
     config.resolve.fallback = { fs: false, path: false, process: false };
     return config;
   },
-});
+};
+
+module.exports = withPWA(nextConfig);
