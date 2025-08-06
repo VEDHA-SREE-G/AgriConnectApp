@@ -1,15 +1,23 @@
+// pages/product/[pid].js
 import Navbar from "../../components/Navbar/Navbar";
 import Styles from "../../styles/IndivualProductPage.module.css";
 import ReactStars from "react-stars";
-import axios from "axios";
 import { addToCart } from "../../redux/cartSlice";
 import { useDispatch } from "react-redux";
 import { useState } from "react";
 
+// Firebase
+import { db } from "../../firebase";
+import { doc, getDoc, collection, getDocs } from "firebase/firestore";
+
 const InduvialPost = (props) => {
   const { loadedProduct } = props;
+
+  if (!loadedProduct) {
+    return <p className="text-center mt-10">Product not found</p>;
+  }
+
   const {
-    id,
     name,
     price,
     image,
@@ -19,11 +27,14 @@ const InduvialPost = (props) => {
     quantity,
     productOwnerName,
   } = loadedProduct;
+
   const dispatch = useDispatch();
   const [stars, setStars] = useState(0);
+
   const closeFeedBack = () => {
     setStars(0);
   };
+
   return (
     <div>
       <Navbar />
@@ -32,35 +43,26 @@ const InduvialPost = (props) => {
         <section className={Styles.productinfo}>
           <div className={Styles.itemimageparent}>
             <div className={Styles.itemlistvertical}>
-              <div className={Styles.thumbbox}>
-                <img className={Styles.img} src={image} alt="thumbnail" />
-              </div>
-              <div className={Styles.thumbbox}>
-                <img className={Styles.img} src={image} alt="thumbnail" />
-              </div>
-              <div className={Styles.thumbbox}>
-                <img className={Styles.img} src={image} alt="thumbnail" />
-              </div>
-              <div className={Styles.thumbbox}>
-                <img className={Styles.img} src={image} alt="thumbnail" />
-              </div>
+              {[...Array(4)].map((_, i) => (
+                <div className={Styles.thumbbox} key={i}>
+                  <img className={Styles.img} src={image} alt="thumbnail" />
+                </div>
+              ))}
             </div>
             <div className={Styles.itemimagemain}>
               <img className={Styles.img} src={image} alt="source image" />
             </div>
           </div>
+
           <div className={Styles.iteminfoparent}>
             <div className={Styles.maininfo}>
-              <h4 className={` text-[1.5rem]`}>
-                <b>{name}</b>
-              </h4>
+              <h4 className="text-[1.5rem] font-bold">{name}</h4>
               <div>
-                <p className="text-[1.2rem] font-bold text-[#000]">
-                  Description
-                </p>
+                <p className="text-[1.2rem] font-bold text-[#000]">Description</p>
                 <p className="font-poppins">{description}</p>
               </div>
 
+              {/* Rating Section */}
               <div className={Styles.starrating}>
                 <p className="text-[1.2rem] text-[#000]">
                   <b>Review:</b>
@@ -88,12 +90,13 @@ const InduvialPost = (props) => {
                       placeholder="Write your reviews..."
                       className="w-full focus:outline-none"
                     ></textarea>
-                    <button className=" border-1 rounded-[12px] bg-[#20E58F] hover:bg-[#229764]  border-transparent focus:border-transparent focus:ring-0  text-white p-2">
+                    <button className="border-1 rounded-[12px] bg-[#20E58F] hover:bg-[#229764] border-transparent focus:border-transparent focus:ring-0 text-white p-2">
                       <p className="font-poppins">Submit</p>
                     </button>
                   </div>
                 )}
               </div>
+
               <p className={Styles.p}>
                 <b>Price: </b>
                 <span className={Styles.span} id={Styles.price}>
@@ -111,24 +114,21 @@ const InduvialPost = (props) => {
 
             <div className={Styles.selectitems}>
               <div className={Styles.changecolor}>
-                <div className={Styles.thumbbox}>
-                  <img className={Styles.img} src={image} alt="thumbnail" />
-                </div>
-                <div className={Styles.thumbbox}>
-                  <img className={Styles.img} src={image} alt="thumbnail" />
-                </div>
+                {[...Array(2)].map((_, i) => (
+                  <div className={Styles.thumbbox} key={i}>
+                    <img className={Styles.img} src={image} alt="thumbnail" />
+                  </div>
+                ))}
               </div>
 
               <div className={Styles.description}>
                 <ul className={Styles.ul}>
                   <li>
-                    {" "}
                     <p>
                       <b>Location: </b>
                       {location} Away
                     </p>
                   </li>
-
                   <li>
                     <span className="flex">
                       <p className="mr-2">
@@ -158,25 +158,36 @@ const InduvialPost = (props) => {
 
 export default InduvialPost;
 
+// ✅ Fetch single product
 export async function getStaticProps(context) {
   const { params } = context;
   const productId = params.pid;
-  const product = await axios.get(
-    `http://localhost:3000/api/product/${productId}`
-  );
+
+  const docRef = doc(db, "products", productId);
+  const docSnap = await getDoc(docRef);
+
+  if (!docSnap.exists()) {
+    return { notFound: true };
+  }
+
   return {
     props: {
-      loadedProduct: product.data,
+      loadedProduct: { id: docSnap.id, ...docSnap.data() },
     },
+    revalidate: 10, // ISR: refresh every 10s
   };
 }
 
+// ✅ Fetch all products for paths
 export async function getStaticPaths() {
-  const products = await axios.get("http://localhost:3000/api/products");
-  const pids = products.data.map((product) => product.id.toString());
-  const params = pids.map((id) => ({ params: { pid: id } }));
+  const querySnapshot = await getDocs(collection(db, "products"));
+
+  const paths = querySnapshot.docs.map((doc) => ({
+    params: { pid: doc.id },
+  }));
+
   return {
-    paths: params,
+    paths,
     fallback: false,
   };
 }
