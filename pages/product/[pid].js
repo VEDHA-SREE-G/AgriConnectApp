@@ -12,8 +12,9 @@ import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 
 const InduvialPost = (props) => {
   const { loadedProduct } = props;
-const dispatch = useDispatch();
+  const dispatch = useDispatch();
   const [stars, setStars] = useState(0);
+
   if (!loadedProduct) {
     return <p className="text-center mt-10">Product not found</p>;
   }
@@ -28,8 +29,6 @@ const dispatch = useDispatch();
     quantity,
     productOwnerName,
   } = loadedProduct;
-
-  
 
   const closeFeedBack = () => {
     setStars(0);
@@ -170,9 +169,19 @@ export async function getStaticProps(context) {
     return { notFound: true };
   }
 
+  const productData = docSnap.data();
+
+  // 🔥 Convert Firestore Timestamps to strings
+  const safeProduct = {
+    id: docSnap.id,
+    ...productData,
+    createdAt: productData.createdAt?.toDate().toISOString() || null,
+    updatedAt: productData.updatedAt?.toDate().toISOString() || null,
+  };
+
   return {
     props: {
-      loadedProduct: { id: docSnap.id, ...docSnap.data() },
+      loadedProduct: safeProduct,
     },
     revalidate: 10, // ISR: refresh every 10s
   };
@@ -182,8 +191,8 @@ export async function getStaticProps(context) {
 export async function getStaticPaths() {
   const querySnapshot = await getDocs(collection(db, "products"));
 
-  const paths = querySnapshot.docs.map((doc) => ({
-    params: { pid: doc.id },
+  const paths = querySnapshot.docs.map((docSnap) => ({
+    params: { pid: docSnap.id },
   }));
 
   return {
