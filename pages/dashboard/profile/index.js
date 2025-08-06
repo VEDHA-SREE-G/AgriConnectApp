@@ -1,7 +1,7 @@
 import React from "react";
 import DashBoardNavBar from "../../../components/DashBoardNavBar/DashBoardNavBar";
 import DashBoardSidebar from "../../../components/DashBoardSidebar/DashBoardSidebar";
-import ProfileComponent from "../../../components/Profile/ProfileComponent";
+import ProfileComponent from "../../../components/profile/ProfileComponent";
 import { useSelector } from "react-redux";
 import { useState } from "react";
 import axios from "axios";
