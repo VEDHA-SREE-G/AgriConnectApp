@@ -4,7 +4,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, collection, getDocs, setDoc, getDoc, deleteDoc, doc } from 'firebase/firestore';
 import Link from "next/link";
-import { db } from "../../firebase";
+import { db,auth } from "../../firebase";
 // const firebaseConfig = {
 //   apiKey: "AIzaSyB0mvAaGlZl9_-TPHLe_Cgkofhlvj64rdc",
 //   authDomain: "agriconnect-3c327.firebaseapp.com",

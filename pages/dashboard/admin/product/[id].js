@@ -7,21 +7,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
-
-const firebaseConfig = {
-  apiKey: "AIzaSyB0mvAaGlZl9_-TPHLe_Cgkofhlvj64rdc",
-  authDomain: "agriconnect-3c327.firebaseapp.com",
-  projectId: "agriconnect-3c327",
-  storageBucket: "agriconnect-3c327.appspot.com",
-  messagingSenderId: "522663366346",
-  appId: "1:522663366346:web:812340ea9450a74150ae33",
-  measurementId: "G-DB1CY1X8JP"
-};
-
-// Initialize Firebase only if it hasn't been initialized already
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-const auth = getAuth(app);
-const db = getFirestore(app);
+import {db,auth} from '../../../../firebase';
 
 // Google Translate Component
 const GoogleTranslate = () => {
@@ -103,7 +89,7 @@ const EditProductPage = ({ product }) => {
     e.preventDefault();
     
     try {
-      const productRef = doc(db, "products", editedProduct.productId);
+      const productRef = doc(db, "products", router.query.id);
       
       await updateDoc(productRef, {
         productType: editedProduct.category,
@@ -136,7 +122,7 @@ const EditProductPage = ({ product }) => {
     e.preventDefault();
     
     try {
-      await deleteDoc(doc(db, "products", pid));
+      await deleteDoc(doc(db, "products", router.query.id));
       
       toast.error("Product deleted successfully!", {
         position: "bottom-right",
