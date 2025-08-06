@@ -32,6 +32,9 @@ const cartSlice = createSlice({
       state.splice(0, state.length);
     },
   },
+  setCart: (state, action) => {
+      return action.payload; // replace entire cart with Firebase data
+    },
 });
 
 export const cartReducer = cartSlice.reducer;
@@ -42,4 +45,5 @@ export const {
   decrementQuantity,
   removeFromCart,
   resetCart,
+   setCart,
 } = cartSlice.actions;

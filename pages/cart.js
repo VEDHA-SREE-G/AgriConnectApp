@@ -7,7 +7,8 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   decrementQuantity,
   incrementQuantity,
-  removeFromCart
+  removeFromCart,
+  setCart
 } from "../redux/cartSlice";
 import Link from "next/link";
 import { addToOrder, resetOrder } from "../redux/orderSlice";
