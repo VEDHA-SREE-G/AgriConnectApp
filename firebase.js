@@ -1,5 +1,5 @@
 // firebase.js
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
@@ -13,9 +13,8 @@ const firebaseConfig = {
   measurementId: "G-DB1CY1X8JP",
 };
 
-// Initialize Firebase once
-const app = initializeApp(firebaseConfig);
+// ✅ Prevent multiple initialization (important for Netlify)
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-// Export auth & firestore
 export const auth = getAuth(app);
 export const db = getFirestore(app);

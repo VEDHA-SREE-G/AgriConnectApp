@@ -9,9 +9,9 @@ import {
   where, 
   getDocs 
 } from "firebase/firestore";
-
+import { db } from "../../firebase";
 // Initialize Firestore (assuming it's already initialized in your app)
-const db = getFirestore();
+// const db = getFirestore();
 
 // Star Rating Modal Component
 function StarRatingModal({ isOpen, onClose, onSubmit, productName }) {

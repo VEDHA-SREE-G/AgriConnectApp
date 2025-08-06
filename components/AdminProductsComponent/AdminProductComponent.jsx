@@ -4,20 +4,20 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, collection, getDocs, setDoc, getDoc, deleteDoc, doc } from 'firebase/firestore';
 import Link from "next/link";
+import { db } from "../../firebase";
+// const firebaseConfig = {
+//   apiKey: "AIzaSyB0mvAaGlZl9_-TPHLe_Cgkofhlvj64rdc",
+//   authDomain: "agriconnect-3c327.firebaseapp.com",
+//   projectId: "agriconnect-3c327",
+//   storageBucket: "agriconnect-3c327.appspot.com",
+//   messagingSenderId: "522663366346",
+//   appId: "1:522663366346:web:812340ea9450a74150ae33",
+//   measurementId: "G-DB1CY1X8JP"
+// };
 
-const firebaseConfig = {
-  apiKey: "AIzaSyB0mvAaGlZl9_-TPHLe_Cgkofhlvj64rdc",
-  authDomain: "agriconnect-3c327.firebaseapp.com",
-  projectId: "agriconnect-3c327",
-  storageBucket: "agriconnect-3c327.appspot.com",
-  messagingSenderId: "522663366346",
-  appId: "1:522663366346:web:812340ea9450a74150ae33",
-  measurementId: "G-DB1CY1X8JP"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+// const app = initializeApp(firebaseConfig);
+// const auth = getAuth(app);
+// const db = getFirestore(app);
 
 // Google Translate Component
 const GoogleTranslate = () => {

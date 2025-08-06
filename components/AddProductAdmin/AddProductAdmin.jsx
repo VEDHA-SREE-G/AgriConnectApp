@@ -7,7 +7,7 @@ import { getAuth } from "firebase/auth";
 import { getFirestore, doc, setDoc } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { initializeApp, getApps, getApp } from "firebase/app";
-
+import { db } from "../../firebase";
 function AddProductAdmin() {
   const [productName, setProductName] = useState("");
   const [productType, setProductType] = useState("");
@@ -26,22 +26,22 @@ function AddProductAdmin() {
   const admin = useSelector((state) => state.admin)?.admin;
   const router = useRouter();
 
-  // Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyB0mvAaGlZl9_-TPHLe_Cgkofhlvj64rdc",
-    authDomain: "agriconnect-3c327.firebaseapp.com",
-    projectId: "agriconnect-3c327",
-    storageBucket: "agriconnect-3c327.appspot.com",
-    messagingSenderId: "522663366346",
-    appId: "1:522663366346:web:812340ea9450a74150ae33",
-    measurementId: "G-DB1CY1X8JP"
-  };
+  // // Firebase configuration
+  // const firebaseConfig = {
+  //   apiKey: "AIzaSyB0mvAaGlZl9_-TPHLe_Cgkofhlvj64rdc",
+  //   authDomain: "agriconnect-3c327.firebaseapp.com",
+  //   projectId: "agriconnect-3c327",
+  //   storageBucket: "agriconnect-3c327.appspot.com",
+  //   messagingSenderId: "522663366346",
+  //   appId: "1:522663366346:web:812340ea9450a74150ae33",
+  //   measurementId: "G-DB1CY1X8JP"
+  // };
 
-  // Initialize Firebase - better way
-  const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-  const auth = getAuth(app);
-  const db = getFirestore(app);
-  const storage = getStorage(app);
+  // // Initialize Firebase - better way
+  // const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+  // const auth = getAuth(app);
+  // const db = getFirestore(app);
+  // const storage = getStorage(app);
 
   // Google Translate initialization
   useEffect(() => {
