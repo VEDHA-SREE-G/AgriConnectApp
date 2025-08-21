@@ -19,33 +19,7 @@ import { db,auth } from "../../firebase";
 // const auth = getAuth(app);
 // const db = getFirestore(app);
 
-// Google Translate Component
-const GoogleTranslate = () => {
-  useEffect(() => {
-    const addScript = () => {
-      const script = document.createElement('script');
-      script.src = '//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
-      script.async = true;
-      document.body.appendChild(script);
-    };
 
-    window.googleTranslateElementInit = () => {
-      new window.google.translate.TranslateElement({
-        pageLanguage: 'en',
-        includedLanguages: 'en,ta,hi,te,kn,ml,bn,gu,mr,or,ur',
-        layout: window.google.translate.TranslateElement.InlineLayout.SIMPLE
-      }, 'google_translate_element');
-    };
-
-    if (!window.google || !window.google.translate) {
-      addScript();
-    } else {
-      window.googleTranslateElementInit();
-    }
-  }, []);
-
-  return <div id="google_translate_element"></div>;
-};
 
 function AdminProductComponent() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -112,7 +86,6 @@ function AdminProductComponent() {
 
   return (
     <div>
-      <GoogleTranslate />
       <div>
         <div className="w-full h-full flex ">
           <div className="w-full relative max-w-7xl h-96 items-center  ">

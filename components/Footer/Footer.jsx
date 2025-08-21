@@ -21,24 +21,27 @@ const Footer = () => {
         <div className="flex items-center justify-center mt-20  ">
           <Image
             src="/Images/Logo/Instagram.png"
-            width="60px"
-            height="60px"
+            width={60}
+            height={60}
             alt="insta-logo"
             className="hover:scale-105 cursor-pointer"
+            unoptimized={true}
           />
           <Image
             src="/Images/Logo/Facebook.png"
-            width="60px"
-            height="60px"
+            width={60}
+            height={60}
             alt="fb-logo"
             className="hover:scale-105 cursor-pointer"
+            unoptimized={true}
           />
           <Image
-            src="/Images/Logo/Whatsapp.png"
-            width="60px"
-            height="60px"
+            src="/Images/Logo/WhatsApp.png"
+            width={60}
+            height={60}
             className="hover:scale-105 cursor-pointer"
             alt="insta-logo"
+            unoptimized={true}
           />
         </div>
         <h3 className="text-center font-bold font-poppins text-[25px] mt-5 sm_max:text-[1rem] ">

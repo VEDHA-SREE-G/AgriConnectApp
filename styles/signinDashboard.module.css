@@ -64,6 +64,21 @@
   background: #004e16;
 }
 
+.butn {
+  width: 150px;
+  height: 66px;
+  margin-top: 3%;
+  left: 1000px;
+  top: 447px;
+  font-size: 30px;
+  background: #004e16;
+  color: white;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.butn:hover {
+  background: #d7b12a;
+}
 .ks {
   margin-top: 4%;
   border-radius: 12px;
