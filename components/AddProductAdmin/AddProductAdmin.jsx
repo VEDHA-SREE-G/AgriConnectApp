@@ -44,47 +44,9 @@ function AddProductAdmin() {
   // const storage = getStorage(app);
 
   // Google Translate initialization
-  useEffect(() => {
-    // Load Google Translate script
-    const script = document.createElement('script');
-    script.src = "//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
-    script.async = true;
-    document.body.appendChild(script);
+  
 
-    // Initialize Google Translate
-    window.googleTranslateElementInit = function() {
-      new window.google.translate.TranslateElement({
-        pageLanguage: 'en',
-        includedLanguages: 'en,ta,hi,te,kn,ml,bn,gu,mr,or,ur',
-        layout: window.google.translate.TranslateElement.InlineLayout.SIMPLE,
-        autoDisplay: false,
-        multilanguagePage: true
-      }, 'google_translate_element');
-      
-      // Clean up Google Translate UI
-      setTimeout(cleanupTranslation, 500);
-      setTimeout(cleanupTranslation, 1500);
-    };
-
-    // Cleanup function
-    return () => {
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
-      }
-    };
-  }, []);
-
-  const cleanupTranslation = () => {
-    const banner = document.querySelector('.goog-te-banner-frame');
-    if (banner) {
-      banner.style.display = 'none';
-      banner.style.visibility = 'hidden';
-      banner.style.height = '0';
-    }
-    document.body.style.top = '0px';
-    document.body.style.position = 'relative';
-  };
-
+  
   const onAddProduct = async (e) => {
     e.preventDefault();
     
@@ -216,77 +178,6 @@ function AddProductAdmin() {
 
   return (
     <>
-      {/* Google Translate Element */}
-      <div id="google_translate_element" style={{
-        position: 'fixed',
-        top: '20px',
-        right: '20px',
-        zIndex: 1000,
-        background: 'rgba(255, 255, 255, 0.95)',
-        padding: '8px 12px',
-        borderRadius: '8px',
-        backdropFilter: 'blur(10px)',
-        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)'
-      }}></div>
-
-      <style jsx>{`
-        /* Hide the "Powered by Google Translate" text */
-        .goog-te-gadget > span > a {
-          display: none !important;
-        }
-        
-        .goog-te-gadget .goog-logo-link {
-          display: none !important;
-        }
-        
-        .goog-te-gadget span:first-child {
-          display: none !important;
-        }
-
-        .goog-te-gadget * {
-          display: inline-block !important;
-          vertical-align: middle !important;
-          font-size: 10px !important;
-        }
-
-        .goog-te-combo {
-          background: #00b09b !important;
-          color: white !important;
-          border: none !important;
-          padding: 6px 10px !important;
-          border-radius: 6px !important;
-          font-size: 13px !important;
-          cursor: pointer !important;
-          outline: none !important;
-          min-width: 120px !important;
-        }
-
-        .goog-te-combo:hover {
-          background: #028c7c !important;
-        }
-
-        .goog-te-banner-frame.skiptranslate {
-          display: none !important;
-        }
-        
-        .goog-te-banner-frame {
-          display: none !important;
-        }
-
-        /* Mobile responsiveness */
-        @media (max-width: 600px) {
-          #google_translate_element {
-            top: 10px !important;
-            right: 10px !important;
-            padding: 6px 8px !important;
-          }
-
-          .goog-te-combo {
-            min-width: 100px !important;
-            font-size: 12px !important;
-          }
-        }
-      `}</style>
 
       <div className="w-full h-full">
         <div className="relative w-full h-96 flex items-center flex-col space-y-32">

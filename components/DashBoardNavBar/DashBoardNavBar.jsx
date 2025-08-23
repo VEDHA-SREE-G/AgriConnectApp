@@ -238,18 +238,18 @@ function DashBoardNavBar() {
           <div
             className={`${Styles.navRes} flex items-center justify-between font-dnsansItal text-[20px] `}
           >
-            <div className={`${router.pathname === "/" ? "active" : ""} `}>
+            {/* <div className={`${router.pathname === "/" ? "active" : ""} `}>
               <Link href="/dashboard/admin/profile/1">Home</Link>
-            </div>
+            </div> */}
 
-            <div
+            {/* <div
               className={`${router.pathname === "/products" ? "active" : ""}`}
             >
               <Link href="/dashboard/admin/products">Products</Link>
-            </div>
-            <div className={`${router.pathname === "/about" ? "active" : ""}`}>
+            </div> */}
+            {/* <div className={`${router.pathname === "/about" ? "active" : ""}`}>
               <Link href="/about">More </Link>
-            </div>
+            </div> */}
           </div>
         </div>
 
