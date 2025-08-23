@@ -1,4 +1,4 @@
-// Updated cart.js with Firebase synchronization
+// Enhanced cart.js with Firebase + Stripe Payment (NO WEBHOOK REQUIRED)
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import styles from "../styles/cart.module.css";
@@ -8,7 +8,8 @@ import {
   decrementQuantity,
   incrementQuantity,
   removeFromCart,
-  setCart
+  setCart,
+  resetCart
 } from "../redux/cartSlice";
 import Link from "next/link";
 import { addToOrder, resetOrder } from "../redux/orderSlice";
@@ -26,12 +27,19 @@ import {
   where,
   onSnapshot
 } from "firebase/firestore";
+import { loadStripe } from "@stripe/stripe-js";
+import axios from "axios";
 
 function Cart() {
   const cart = useSelector((state) => state.cart);
   const user = useSelector((state) => state.user);
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+
+  // Stripe setup
+  const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+  const stripePromise = loadStripe(publishableKey);
 
   // Load cart from Firebase when user logs in
   useEffect(() => {
@@ -235,8 +243,82 @@ function Cart() {
     }
   };
 
-  // Firebase checkout function - Create separate order document for each item + Update Stock
-  const onCartCheckout = async () => {
+  // Store order data in sessionStorage before payment
+  const storeOrderData = () => {
+    const orderData = {
+      cart: cart,
+      userId: user.user?.id || user.id,
+      userEmail: user.user?.email || user.email,
+      timestamp: Date.now(),
+      totalAmount: getTotalPrice()
+    };
+    
+    // Use sessionStorage (clears when tab closes)
+    sessionStorage.setItem('pendingStripeOrder', JSON.stringify(orderData));
+  };
+
+  // STRIPE PAYMENT INTEGRATION (No webhook needed)
+  const createCheckoutSession = async () => {
+    const stripe = await stripePromise;
+    
+    try {
+      const checkoutSession = await axios.post("/api/create-stripe-session", {
+        item: cart,
+        userId: user.user?.id || user.id,
+        userEmail: user.user?.email || user.email
+      });
+      
+      const result = await stripe.redirectToCheckout({
+        sessionId: checkoutSession.data.id,
+      });
+
+      if (result.error) {
+        console.log(result.error.message);
+        alert("Payment failed: " + result.error.message);
+        // Clear stored order data on error
+        sessionStorage.removeItem('pendingStripeOrder');
+      }
+    } catch (error) {
+      console.error("Error creating checkout session:", error);
+      alert("Failed to initiate payment. Please try again.");
+      sessionStorage.removeItem('pendingStripeOrder');
+    }
+  };
+
+  // STRIPE CHECKOUT HANDLER
+  const onStripeCheckout = async () => {
+    if (!user.isLoggedIn) {
+      alert("Please login to place order");
+      return;
+    }
+
+    if (cart.length === 0) {
+      alert("Your cart is empty!");
+      return;
+    }
+
+    setCheckoutLoading(true);
+    try {
+      // Store order data before payment
+      storeOrderData();
+      
+      // Add to Redux order state (for order tracking)
+      dispatch(addToOrder(cart));
+      
+      // Initiate Stripe payment
+      await createCheckoutSession();
+      
+    } catch (error) {
+      console.error("Error during checkout:", error);
+      alert("Failed to proceed with checkout. Please try again.");
+      sessionStorage.removeItem('pendingStripeOrder');
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
+
+  // FIREBASE-ONLY CHECKOUT (Your existing functionality)
+  const onDirectFirebaseCheckout = async () => {
     if (!user.isLoggedIn) {
       alert("Please login to place order");
       return;
@@ -276,8 +358,9 @@ function Cart() {
           totalPrice: item.price * item.quantity,
           image: item.image,
           location: item.location,
-          orderStatus: "pending",
-          paymentStatus: "pending",
+          orderStatus: "confirmed", // Direct order
+          paymentStatus: "cash_on_delivery", // Mark as COD
+          paymentMethod: "direct_order",
           purchasedAt: serverTimestamp(),
           deliveryAddress: user.address || "Not provided"
         };
@@ -298,13 +381,16 @@ function Cart() {
       dispatch(addToOrder(cart));
       
       // Clear cart from both Redux and Firebase
-      cart.forEach(item => {
-        dispatch(removeFromCart(item.id));
-      });
+      dispatch(resetCart());
       await clearFirebaseCart();
 
       const orderIds = orderRefs.map(ref => ref.id).join(", ");
       alert(`Orders placed successfully! Stock updated. Order IDs: ${orderIds}`);
+      
+      // Redirect to orders page
+      setTimeout(() => {
+        window.location.href = "/orders";
+      }, 2000);
       
     } catch (error) {
       console.error("Error placing order:", error);
@@ -355,19 +441,19 @@ function Cart() {
                 <div className={styles.buttons}>
                   <button 
                     onClick={() => handleIncrement(item.id)}
-                    disabled={loading}
+                    disabled={loading || checkoutLoading}
                   >
                     +
                   </button>
                   <button 
                     onClick={() => handleDecrement(item.id)}
-                    disabled={loading}
+                    disabled={loading || checkoutLoading}
                   >
                     -
                   </button>
                   <button 
                     onClick={() => handleRemove(item.id)}
-                    disabled={loading}
+                    disabled={loading || checkoutLoading}
                   >
                     x
                   </button>
@@ -379,11 +465,12 @@ function Cart() {
               <b>Grand Total:</b> ₹ {getTotalPrice()}
             </h2>
             {user.isLoggedIn ? (
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-4">
+                {/* Stripe Payment Button */}
                 <button
-                  className="flex  placeholder:border-2 rounded-[12px] bg-[#20E58F] hover:bg-[#229764]  border-transparent focus:border-transparent focus:ring-0  text-white   items-center p-2 cursor-pointer sm_max:my-10"
-                  onClick={onCartCheckout}
-                  disabled={loading}
+                  className="flex placeholder:border-2 rounded-[12px] bg-[#6366f1] hover:bg-[#4f46e5] border-transparent focus:border-transparent focus:ring-0 text-white items-center p-2 cursor-pointer sm_max:my-10"
+                  onClick={onStripeCheckout}
+                  disabled={loading || checkoutLoading}
                 >
                   <Image
                     src="/Images/Icons/shopping-cart.png"
@@ -392,7 +479,24 @@ function Cart() {
                     alt="shopping cart"
                   />
                   <p className="ml-3 font-normal">
-                    {loading ? "Processing..." : "Check Out!"}
+                    {checkoutLoading ? "Processing Payment..." : "Pay Online"}
+                  </p>
+                </button>
+
+                {/* Direct Firebase Order Button (Cash on Delivery) */}
+                <button
+                  className="flex placeholder:border-2 rounded-[12px] bg-[#20E58F] hover:bg-[#229764] border-transparent focus:border-transparent focus:ring-0 text-white items-center p-2 cursor-pointer sm_max:my-10"
+                  onClick={onDirectFirebaseCheckout}
+                  disabled={loading || checkoutLoading}
+                >
+                  <Image
+                    src="/Images/Icons/shopping-cart.png"
+                    width="20px"
+                    height="20px"
+                    alt="shopping cart"
+                  />
+                  <p className="ml-3 font-normal">
+                    {loading ? "Processing..." : "Cash on Delivery"}
                   </p>
                 </button>
               </div>
@@ -400,7 +504,7 @@ function Cart() {
               <>
                 <div className="flex justify-end">
                   <button
-                    className="flex  placeholder:border-2 rounded-[12px] bg-[#20E58F] hover:bg-[#229764]  border-transparent focus:border-transparent focus:ring-0  text-white   items-center p-2 cursor-not-allowed sm_max:my-10"
+                    className="flex placeholder:border-2 rounded-[12px] bg-[#20E58F] hover:bg-[#229764] border-transparent focus:border-transparent focus:ring-0 text-white items-center p-2 cursor-not-allowed sm_max:my-10"
                     disabled
                   >
                     <Image

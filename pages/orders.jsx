@@ -24,6 +24,54 @@ const OrdersPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Helper function to safely format dates
+  const formatOrderDate = (dateValue) => {
+    try {
+      let date;
+      
+      // Handle Firebase Timestamp
+      if (dateValue && typeof dateValue.toDate === 'function') {
+        date = dateValue.toDate();
+      }
+      // Handle regular Date object
+      else if (dateValue instanceof Date) {
+        date = dateValue;
+      }
+      // Handle string dates
+      else if (typeof dateValue === 'string') {
+        date = new Date(dateValue);
+      }
+      // Handle timestamp numbers
+      else if (typeof dateValue === 'number') {
+        date = new Date(dateValue);
+      }
+      // Handle objects with seconds (Firebase timestamp structure)
+      else if (dateValue && dateValue.seconds) {
+        date = new Date(dateValue.seconds * 1000);
+      }
+      else {
+        // Fallback to current date
+        date = new Date();
+      }
+
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return "Date not available";
+      }
+
+      return date.toLocaleDateString("en-IN", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    } catch (error) {
+      console.error("Error formatting date:", error, dateValue);
+      return "Date not available";
+    }
+  };
+
   async function fetchOrderPurchased(user) {
     if (!user?.user?.id || !user?.isLoggedIn) {
       setError("Please log in to view your orders");
@@ -47,12 +95,17 @@ const OrdersPage = () => {
       const orders = [];
       querySnapshot.forEach((docSnapshot) => {
         const orderData = docSnapshot.data();
+        
+        // Better date handling
         let purchasedDate;
-
-        if (orderData.purchasedAt?.toDate) {
-          purchasedDate = orderData.purchasedAt.toDate();
-        } else if (orderData.purchasedAt) {
-          purchasedDate = new Date(orderData.purchasedAt);
+        if (orderData.purchasedAt) {
+          if (typeof orderData.purchasedAt.toDate === 'function') {
+            purchasedDate = orderData.purchasedAt.toDate();
+          } else if (orderData.purchasedAt.seconds) {
+            purchasedDate = new Date(orderData.purchasedAt.seconds * 1000);
+          } else {
+            purchasedDate = new Date(orderData.purchasedAt);
+          }
         } else {
           purchasedDate = new Date();
         }
@@ -60,6 +113,7 @@ const OrdersPage = () => {
         const transformedOrder = {
           id: docSnapshot.id,
           purchasedAt: purchasedDate,
+          formattedDate: formatOrderDate(orderData.purchasedAt), // Add formatted date
           totalAmount: orderData.totalPrice || orderData.totalAmount || 0,
           status: orderData.orderStatus || orderData.status || "pending",
           paymentStatus: orderData.paymentStatus || "pending",
@@ -85,11 +139,17 @@ const OrdersPage = () => {
         orders.push(transformedOrder);
       });
 
-      orders.sort((a, b) => new Date(b.purchasedAt) - new Date(a.purchasedAt));
+      // Sort by date (most recent first)
+      orders.sort((a, b) => {
+        const dateA = a.purchasedAt instanceof Date ? a.purchasedAt : new Date();
+        const dateB = b.purchasedAt instanceof Date ? b.purchasedAt : new Date();
+        return dateB - dateA;
+      });
+      
       setOrderPurchased(orders);
     } catch (err) {
       setError("Failed to fetch orders");
-      console.error(err);
+      console.error("Fetch orders error:", err);
     } finally {
       setLoading(false);
     }
@@ -196,14 +256,7 @@ const OrdersPage = () => {
               <div className="flex justify-between items-center mb-4">
                 <div>
                   <p className="font-poppins text-lg">
-                    Ordered on{" "}
-                    {order.purchasedAt
-                      ? new Date(order.purchasedAt).toLocaleDateString("en-IN", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })
-                      : "No date available"}
+                    Ordered on {order.formattedDate || formatOrderDate(order.purchasedAt)}
                   </p>
                   <p className="text-sm text-gray-600">
                     Total: ₹{order.totalAmount}
