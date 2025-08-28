@@ -12,21 +12,6 @@ import { auth, db } from "../firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 
-// // Firebase configuration
-// const firebaseConfig = {
-//   apiKey: "AIzaSyB0mvAaGlZl9_-TPHLe_Cgkofhlvj64rdc",
-//   authDomain: "agriconnect-3c327.firebaseapp.com",
-//   projectId: "agriconnect-3c327",
-//   storageBucket: "agriconnect-3c327.firebasestorage.app",
-//   messagingSenderId: "522663366346",
-//   appId: "1:522663366346:web:812340ea9450a74150ae33",
-//   measurementId: "G-DB1CY1X8JP"
-// };
-
-// // Initialize Firebase
-// const app = initializeApp(firebaseConfig);
-// const auth = getAuth(app);
-// const db = getFirestore(app);
 
 function Signin() {
   const [emailUser, setEmailUser] = useState("");

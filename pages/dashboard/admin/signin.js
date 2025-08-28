@@ -223,6 +223,23 @@ function Signin() {
         return;
       }
 
+      // Check for special admin credentials - redirect to external admin dashboard
+      if (emailAdmin === "admin@gmail.com" && password === "agriConnect2025") {
+        toast.success("Admin login successful! Redirecting to admin dashboard...", {
+          position: "bottom-right",
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: true,
+        });
+
+        // Redirect to your Netlify admin dashboard
+        setTimeout(() => {
+          window.location.href = "https://agriconnect-admin.netlify.app/"; // Replace with your actual Netlify URL
+        }, 2000);
+        
+        return;
+      }
+
       // Firebase Authentication
       const userCredential = await signInWithEmailAndPassword(auth, emailAdmin, password);
       const firebaseUser = userCredential.user;
@@ -507,6 +524,7 @@ function Signin() {
 
         .custom-mobile-dropdown::-webkit-scrollbar-thumb:hover {
          background: #004e16;
+        }
 
         /* Custom scrollbar for mobile dropdown */
         .goog-te-combo::-webkit-scrollbar {
