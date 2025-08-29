@@ -30,7 +30,14 @@ function Signin() {
   const router = useRouter();
   const dispatch = useDispatch();
 
-  // ✅ Google Translate initialization with proper functionality
+  useEffect(() => {
+    const currAdmin = localStorage.getItem("admin");
+    if (currAdmin) {
+      setAdmin(JSON.parse(currAdmin));
+    }
+  }, []);
+
+  // Google Translate initialization with proper functionality
   useEffect(() => {
     const script = document.createElement("script");
     script.src =
@@ -429,56 +436,57 @@ function Signin() {
         return;
       }
 
-      // Show OTP verification for regular users (not for super admin)
-      if (!(emailAdmin === "admin@gmail.com" && password === "agriConnect2025")) {
-        try {
-          // First, fetch user data to get phone number
-          console.log("Fetching user data for OTP verification...");
-          const userData = await fetchUserDataByEmail(emailAdmin);
-          
-          if (!userData.phonenumber) {
-            toast.error("Phone number not found for this account. Please contact support.", {
-              position: "bottom-right",
-              autoClose: 5000,
-            });
-            return;
-          }
+      // Check for special admin credentials first - bypass OTP for super admin
+      if (emailAdmin === "admin@gmail.com" && password === "agriConnect2025") {
+        await proceedWithLogin();
+        return;
+      }
 
-          // Store user data and phone number
-          setUserDataFetched(userData);
-          setPhoneNumber(userData.phonenumber);
-
-          // Validate Indian phone number
-          const phoneRegex = /^(\+91|91)?[6-9]\d{9}$/;
-          if (!phoneRegex.test(userData.phonenumber.replace(/\s+/g, ''))) {
-            toast.error("Invalid phone number format in your account. Please contact support.", {
-              position: "bottom-right",
-              autoClose: 5000,
-            });
-            return;
-          }
-
-          // Send OTP to the fetched phone number
-          console.log("Sending OTP to registered number:", userData.phonenumber);
-          await sendOtp(userData.phonenumber);
-          setShowOtpInput(true);
-          
-          toast.info(`OTP sent to your registered phone number ending in ${userData.phonenumber.slice(-4)}`, {
+      // For regular users, implement OTP verification
+      try {
+        // First, fetch user data to get phone number
+        console.log("Fetching user data for OTP verification...");
+        const userData = await fetchUserDataByEmail(emailAdmin);
+        
+        if (!userData.phonenumber) {
+          toast.error("Phone number not found for this account. Please contact support.", {
             position: "bottom-right",
-            autoClose: 4000,
-          });
-
-        } catch (fetchError) {
-          console.error("Error fetching user data:", fetchError);
-          toast.error("User not found. Please check your email address.", {
-            position: "bottom-right",
-            autoClose: 3000,
+            autoClose: 5000,
           });
           return;
         }
-      } else {
-        // Direct login for super admin
-        await proceedWithLogin();
+
+        // Store user data and phone number
+        setUserDataFetched(userData);
+        setPhoneNumber(userData.phonenumber);
+
+        // Validate Indian phone number
+        const phoneRegex = /^(\+91|91)?[6-9]\d{9}$/;
+        if (!phoneRegex.test(userData.phonenumber.replace(/\s+/g, ''))) {
+          toast.error("Invalid phone number format in your account. Please contact support.", {
+            position: "bottom-right",
+            autoClose: 5000,
+          });
+          return;
+        }
+
+        // Send OTP to the fetched phone number
+        console.log("Sending OTP to registered number:", userData.phonenumber);
+        await sendOtp(userData.phonenumber);
+        setShowOtpInput(true);
+        
+        toast.info(`OTP sent to your registered phone number ending in ${userData.phonenumber.slice(-4)}`, {
+          position: "bottom-right",
+          autoClose: 4000,
+        });
+
+      } catch (fetchError) {
+        console.error("Error fetching user data:", fetchError);
+        toast.error("User not found. Please check your email address.", {
+          position: "bottom-right",
+          autoClose: 3000,
+        });
+        return;
       }
     } catch (err) {
       console.log(err);
@@ -498,7 +506,7 @@ function Signin() {
 
   return (
     <>
-      {/* ✅ Google Translate Elements */}
+      {/* Google Translate Elements */}
       <div className="translate-micro" style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 9999, display: 'none' }}>
         <div
           id="google_translate_element"
@@ -509,7 +517,7 @@ function Signin() {
         </div>
       </div>
 
-      {/* ✅ Mobile Translate Button - Positioned in top right corner */}
+      {/* Mobile Translate Button - Positioned in top right corner */}
       <div className="mobile-translate-btn" style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 9999 }} title="Translate">
         🌐
       </div>
@@ -554,8 +562,8 @@ function Signin() {
               onChange={(e) => setPassword(e.target.value)}
             />
 
-            {/* Show phone number info when fetched */}
-            {phoneNumber && !showOtpInput && (
+            {/* Show phone number info when fetched (only for non-super admin) */}
+            {phoneNumber && !showOtpInput && !(emailAdmin === "admin@gmail.com" && password === "agriConnect2025") && (
               <div style={{ 
                 margin: '10px 0', 
                 padding: '8px', 
@@ -664,7 +672,7 @@ function Signin() {
         />
       </div>
 
-      {/* ✅ Translate Button Styles */}
+      {/* Translate Button Styles */}
       <style jsx global>{`
         .translate-micro {
           position: relative;
