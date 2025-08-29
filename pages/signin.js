@@ -1,30 +1,35 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import ConnectTogether from "../components/ConnectTogether/ConnectTogether";
-import styles from "../styles/signin.module.css";
 import Link from "next/link";
+import styles from "../styles/signin.module.css";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import ConnectTogether from "../components/ConnectTogether/ConnectTogether";
 import { useRouter } from "next/router";
 import { useDispatch, useSelector } from "react-redux";
 import { login } from "../redux/userSlice";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import { auth, db } from "../firebase"; 
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-
+import { doc, getDoc, query, where, collection, getDocs } from "firebase/firestore";
+import { auth, db } from "../firebase";
 
 function Signin() {
   const [emailUser, setEmailUser] = useState("");
   const [password, setPassword] = useState("");
   const [user, setUser] = useState(null);
+  
+  // OTP related states
+  const [showOtpInput, setShowOtpInput] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [generatedOtp, setGeneratedOtp] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState(""); // This will be fetched from Firebase
+  const [isOtpSending, setIsOtpSending] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpTimer, setOtpTimer] = useState(0);
+  const [userDataFetched, setUserDataFetched] = useState(null); // Store fetched user data
+  
   const router = useRouter();
   const dispatch = useDispatch();
-  const currentUser = useSelector((state) => state.user);
   const cartItems = useSelector((state) => state.cart);
-
-  
-
-  
 
   useEffect(() => {
     const currUser = localStorage.getItem("currentUser");
@@ -130,7 +135,7 @@ function Signin() {
                 right: ${window.innerWidth - rect.right}px;
                 z-index: 9999;
                 background: white;
-                border: 2px solid #004e16;
+               border: 2px solid #004e16;
                 border-radius: 12px;
                 box-shadow: 0 10px 30px rgba(0,0,0,0.3);
                 padding: 8px 0;
@@ -228,25 +233,143 @@ function Signin() {
     };
   }, []);
 
-  const signIn = async () => {
+  // OTP Timer Effect
+  useEffect(() => {
+    let interval = null;
+    if (otpTimer > 0) {
+      interval = setInterval(() => {
+        setOtpTimer(timer => timer - 1);
+      }, 1000);
+    } else if (otpTimer === 0) {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [otpTimer]);
+
+  // Generate 6-digit OTP
+  const generateOtp = () => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  };
+
+  // Fetch user data from Firebase by email
+  const fetchUserDataByEmail = async (email) => {
     try {
-      if (emailUser === "" || password === "") {
-        toast.error("Please fill in all fields", {
+      console.log("Fetching user data for email:", email);
+      
+      // Query users collection by email
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("email", "==", email));
+      const querySnapshot = await getDocs(q);
+      
+      if (querySnapshot.empty) {
+        throw new Error("No user found with this email");
+      }
+      
+      const userDoc = querySnapshot.docs[0];
+      const userData = userDoc.data();
+      
+      console.log("User data fetched:", {
+        email: userData.email,
+        phonenumber: userData.phonenumber,
+        username: userData.username,
+        role: userData.role
+      });
+      
+      return { id: userDoc.id, ...userData };
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      throw error;
+    }
+  };
+
+  // Send OTP via SMS
+  const sendOtp = async (phoneNumber) => {
+    try {
+      setIsOtpSending(true);
+      const newOtp = generateOtp();
+      setGeneratedOtp(newOtp);
+
+      console.log("Sending OTP to:", phoneNumber);
+
+      const response = await fetch('/api/send-sms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: phoneNumber,
+          message: `Your AgriConnect verification code is: ${newOtp}. This code will expire in 5 minutes. Please do not share this code with anyone.`
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setOtpSent(true);
+        setOtpTimer(300); // 5 minutes timer
+        toast.success("OTP sent successfully to your registered phone number!", {
           position: "bottom-right",
           autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
         });
-        return;
+      } else {
+        throw new Error(data.message || 'Failed to send OTP');
       }
+    } catch (error) {
+      console.error('Error sending OTP:', error);
+      toast.error(error.message || "Failed to send OTP. Please try again.", {
+        position: "bottom-right",
+        autoClose: 5000,
+      });
+    } finally {
+      setIsOtpSending(false);
+    }
+  };
 
+  // Verify OTP
+  const verifyOtp = () => {
+    if (otp === generatedOtp) {
+      setShowOtpInput(false);
+      toast.success("Phone number verified successfully!", {
+        position: "bottom-right",
+        autoClose: 3000,
+      });
+      // Continue with login process
+      proceedWithLogin();
+    } else {
+      toast.error("Invalid OTP. Please try again.", {
+        position: "bottom-right",
+        autoClose: 3000,
+      });
+    }
+  };
+
+  // Resend OTP
+  const resendOtp = async () => {
+    if (otpTimer > 0) {
+      toast.warning("Please wait before requesting a new OTP", {
+        position: "bottom-right",
+        autoClose: 3000,
+      });
+      return;
+    }
+    
+    await sendOtp(phoneNumber);
+    setOtp(""); // Clear previous OTP input
+  };
+
+  // Proceed with login after OTP verification
+  const proceedWithLogin = async () => {
+    try {
       // Firebase Authentication
       const userCredential = await signInWithEmailAndPassword(auth, emailUser, password);
       const firebaseUser = userCredential.user;
 
-      // Get user data from Firestore
-      const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
-      const userData = userDoc.data();
+      // Use the already fetched user data or fetch it again
+      let userData = userDataFetched;
+      if (!userData) {
+        const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+        userData = userDoc.data();
+      }
 
       if (!userData) {
         toast.error("User data not found", {
@@ -298,6 +421,89 @@ function Signin() {
       });
     }
   };
+  
+  const signIn = async () => {
+    try {
+      if (emailUser === "" || password === "") {
+        toast.error("Please fill in all fields", {
+          position: "bottom-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+        });
+        return;
+      }
+
+      try {
+        // First, fetch user data to get phone number
+        console.log("Fetching user data for OTP verification...");
+        const userData = await fetchUserDataByEmail(emailUser);
+        
+        if (!userData.phonenumber) {
+          toast.error("Phone number not found for this account. Please contact support.", {
+            position: "bottom-right",
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+          });
+          return;
+        }
+
+        // Store user data and phone number
+        setUserDataFetched(userData);
+        setPhoneNumber(userData.phonenumber);
+
+        // Validate Indian phone number
+        const phoneRegex = /^(\+91|91)?[6-9]\d{9}$/;
+        if (!phoneRegex.test(userData.phonenumber.replace(/\s+/g, ''))) {
+          toast.error("Invalid phone number format in your account. Please contact support.", {
+            position: "bottom-right",
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+          });
+          return;
+        }
+
+        // Send OTP to the fetched phone number
+        console.log("Sending OTP to registered number:", userData.phonenumber);
+        await sendOtp(userData.phonenumber);
+        setShowOtpInput(true);
+        
+        toast.info(`OTP sent to your registered phone number ending in ${userData.phonenumber.slice(-4)}`, {
+          position: "bottom-right",
+          autoClose: 4000,
+          hideProgressBar: false,
+          closeOnClick: true,
+        });
+
+      } catch (fetchError) {
+        console.error("Error fetching user data:", fetchError);
+        toast.error("User not found. Please check your email address.", {
+          position: "bottom-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+        });
+        return;
+      }
+    } catch (err) {
+      console.log(err);
+      toast.error(err.message, {
+        position: "bottom-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+      });
+    }
+  };
+
+  // Format timer display
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   return (
     <>
@@ -340,27 +546,113 @@ function Signin() {
         <div className={styles.place}>
           <div className={styles.login}>
             <h2 className={styles.jh}>LOGIN</h2>
+            
             <input
               className={styles.km}
               type="text"
               placeholder="E-Mail"
-              onChange={(e) => {
-                setEmailUser(e.target.value);
-              }}
+              value={emailUser}
+              onChange={(e) => setEmailUser(e.target.value)}
             />
+            
             <input
               className={styles.ks}
               type="password"
               placeholder="Password"
-              onChange={(e) => {
-                setPassword(e.target.value);
-              }}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
-            <button className={styles.btn} onClick={() => signIn()}>
-              Sign in
-            </button>
+
+            {/* Show phone number info when fetched */}
+            {phoneNumber && !showOtpInput && (
+              <div style={{ 
+                margin: '10px 0', 
+                padding: '8px', 
+                background: '#f8fffc', 
+                border: '1px solid #46b57f', 
+                borderRadius: '5px',
+                fontSize: '14px',
+                color: '#004e16'
+              }}>
+                📱 OTP will be sent to: ***{phoneNumber.slice(-4)}
+              </div>
+            )}
+
+            {/* OTP Input Section */}
+            {showOtpInput && (
+              <div style={{ marginTop: '10px' }}>
+                <div style={{ 
+                  margin: '10px 0', 
+                  padding: '10px', 
+                  background: '#f0f9ff', 
+                  border: '2px solid #46b57f', 
+                  borderRadius: '8px',
+                  textAlign: 'center'
+                }}>
+                  <p style={{ margin: '0 0 5px 0', fontWeight: 'bold', color: '#004e16' }}>
+                    📱 Verify Your Phone Number
+                  </p>
+                  <p style={{ margin: '0', fontSize: '14px', color: '#666' }}>
+                    OTP sent to: ***{phoneNumber.slice(-4)}
+                  </p>
+                </div>
+
+                <input
+                  className={styles.km}
+                  type="text"
+                  placeholder="Enter 6-digit OTP"
+                  value={otp}
+                  maxLength="6"
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                />
+                
+                {otpTimer > 0 && (
+                  <p style={{ color: '#46b57f', fontSize: '14px', margin: '5px 0', textAlign: 'center' }}>
+                    ⏱️ OTP expires in: {formatTime(otpTimer)}
+                  </p>
+                )}
+                
+                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                  <button 
+                    className={styles.btn} 
+                    onClick={verifyOtp}
+                    disabled={!otp || otp.length !== 6}
+                    style={{ 
+                      flex: 1,
+                      opacity: (!otp || otp.length !== 6) ? 0.6 : 1 
+                    }}
+                  >
+                    Verify OTP
+                  </button>
+                  
+                  <button 
+                    className={styles.btn1} 
+                    onClick={resendOtp}
+                    disabled={otpTimer > 0 || isOtpSending}
+                    style={{ 
+                      flex: 1,
+                      opacity: (otpTimer > 0 || isOtpSending) ? 0.6 : 1 
+                    }}
+                  >
+                    {isOtpSending ? 'Sending...' : 'Resend OTP'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!showOtpInput && (
+              <button 
+                className={styles.btn} 
+                onClick={signIn}
+                disabled={isOtpSending}
+              >
+                {isOtpSending ? 'Sending OTP...' : 'Sign in'}
+              </button>
+            )}
+            
             <ToastContainer />
           </div>
+          
           <div className={styles.signup}>
             <div className={styles.wrap}>
               <h2>
@@ -368,15 +660,15 @@ function Signin() {
               </h2>
               <h4>sign up and discover our Products</h4>
               <button className={styles.btn1}>
-                <Link href="/signup">Sign up</Link>{" "}
+                <Link href="/signup">Sign up</Link>
               </button>
             </div>
           </div>
         </div>
         <Image
           src="/Images/Split Leaf.png"
-          width="100px"
-          height="100px"
+          width="100"
+          height="100"
           alt="leaf-img"
         />
       </div>
@@ -472,9 +764,9 @@ function Signin() {
           cursor: pointer;
           border-radius: 10px;
           background: #f4f8f6;
-          border: 2px solid #004e16;
+         border: 2px solid #004e16;
           color: #004e16;
-          box-shadow: 0 4px 15px rgba(70, 181, 127, 0.4);
+        box-shadow: 0 4px 15px rgba(70, 181, 127, 0.4);
           position: relative;
         }
 
@@ -505,7 +797,7 @@ function Signin() {
         }
 
         .custom-mobile-dropdown::-webkit-scrollbar-thumb {
-          background: #46b57f;
+         background: #46b57f;
           border-radius: 3px;
         }
 
@@ -530,6 +822,32 @@ function Signin() {
 
         .goog-te-combo::-webkit-scrollbar-thumb:hover {
           background: rgba(255, 255, 255, 0.5);
+        }
+
+        /* OTP Input Styles */
+        .otp-container {
+          margin-top: 15px;
+          padding: 20px;
+          border: 2px solid #46b57f;
+          border-radius: 10px;
+          background: #f8fffc;
+        }
+
+        .otp-timer {
+          color: #46b57f;
+          font-weight: bold;
+          text-align: center;
+          margin: 10px 0;
+        }
+
+        .otp-buttons {
+          display: flex;
+          gap: 10px;
+          margin-top: 15px;
+        }
+
+        .otp-buttons button {
+          flex: 1;
         }
       `}</style>
     </>

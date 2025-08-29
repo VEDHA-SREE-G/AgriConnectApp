@@ -1,4 +1,4 @@
-// Enhanced cart.js with Firebase + Stripe Payment (NO WEBHOOK REQUIRED)
+// Enhanced cart.js with Firebase + Stripe Payment + SMS Notifications
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import styles from "../styles/cart.module.css";
@@ -243,6 +243,137 @@ function Cart() {
     }
   };
 
+  // NEW: Send SMS notification function with Firebase user data fetch
+  const sendOrderSMS = async (orderType = 'direct', orderIds = []) => {
+    try {
+      console.log('=== SMS DEBUG START ===');
+      
+      // Get user ID
+      const userId = user.user?.id || user.id || user.user?.uid || user.uid;
+      console.log('User ID for Firebase lookup:', userId);
+      
+      if (!userId) {
+        console.error('❌ No user ID found');
+        alert('SMS notification failed: User not properly logged in');
+        return;
+      }
+
+      // Fetch complete user profile from Firebase
+      console.log('🔍 Fetching user profile from Firebase...');
+      const userQuery = query(
+        collection(db, "users"), // Assuming your users collection is called "users"
+        where("uid", "==", userId)
+      );
+      
+      const userSnapshot = await getDocs(userQuery);
+      
+      if (userSnapshot.empty) {
+        console.error('❌ User profile not found in Firebase');
+        alert('SMS notification failed: User profile not found');
+        return;
+      }
+
+      // Get the user document data
+      const userDoc = userSnapshot.docs[0];
+      const userFirebaseData = userDoc.data();
+      
+      console.log('Firebase user data:', userFirebaseData);
+      
+      // Extract phone number and username from Firebase data
+      const userPhoneNumber = userFirebaseData.phonenumber || userFirebaseData.phoneNumber || userFirebaseData.phone;
+      const userName = userFirebaseData.username || userFirebaseData.name || 'Customer';
+      
+      console.log('Extracted phone number from Firebase:', userPhoneNumber);
+      console.log('Extracted username from Firebase:', userName);
+      
+      if (!userPhoneNumber) {
+        console.error('❌ No phone number found in Firebase user profile');
+        alert('SMS notification failed: No phone number found in user profile');
+        return;
+      }
+
+      // Format delivery address from Firebase user data
+      console.log('User address data from Firebase:', {
+        street: userFirebaseData.street,
+        addressline1: userFirebaseData.addressline1,
+        addressline2: userFirebaseData.addressline2,
+        area: userFirebaseData.area,
+        city: userFirebaseData.city,
+        state: userFirebaseData.state,
+        pincode: userFirebaseData.pincode
+      });
+      
+      const deliveryAddress = [
+        userFirebaseData.street,
+        userFirebaseData.addressline1,
+        userFirebaseData.addressline2,
+        userFirebaseData.area,
+        userFirebaseData.city,
+        userFirebaseData.state,
+        userFirebaseData.pincode
+      ].filter(Boolean).join(', ');
+
+      console.log('Formatted delivery address:', deliveryAddress);
+
+      // Create order summary
+      const itemsSummary = cart.map(item => 
+        `${item.name} x${item.quantity} = ₹${item.price * item.quantity}`
+      ).join('\n');
+
+      const totalAmount = getTotalPrice();
+      
+      console.log('Order items summary:', itemsSummary);
+      console.log('Total amount:', totalAmount);
+      
+      // Create SMS message based on order type - SHORTENED for trial account
+      let smsMessage = '';
+      
+      if (orderType === 'stripe') {
+        smsMessage = `Hi ${userName}! Your order is confirmed. Payment: Online. Total: ₹${totalAmount}. Track in app. Thanks!`;
+      } else {
+        const orderIdText = orderIds.length > 0 ? `ID: ${orderIds[0]}` : ''; // Only first order ID
+        smsMessage = `Hi ${userName}! Order confirmed. ${orderIdText}. COD: ₹${totalAmount}. Delivery to ${userFirebaseData.city || 'your address'}. Thanks!`;
+      }
+
+      console.log('SMS Message to send:', smsMessage);
+      console.log('SMS Message length:', smsMessage.length);
+
+      // Send SMS via API
+      console.log('📱 Attempting to send SMS to:', userPhoneNumber);
+      console.log('Making API call to /api/send-sms...');
+      
+      const response = await axios.post('/api/send-sms', {
+        to: userPhoneNumber,
+        message: smsMessage
+      });
+
+      console.log('SMS API Response:', response.data);
+
+      if (response.data.success) {
+        console.log('✅ Order SMS sent successfully:', response.data.messageSid);
+        alert('Order placed! SMS notification sent successfully.');
+      } else {
+        console.error('❌ Failed to send SMS:', response.data);
+        alert(`SMS notification failed: ${response.data.message || 'Unknown error'}`);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error sending order SMS:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      // Show user-friendly error message
+      const errorMsg = error.response?.data?.message || error.message || 'Unknown error';
+      alert(`SMS notification failed: ${errorMsg}`);
+      
+      // Don't throw error - SMS failure shouldn't break order flow
+    }
+    console.log('=== SMS DEBUG END ===');
+  };
+
   // Store order data in sessionStorage before payment
   const storeOrderData = () => {
     const orderData = {
@@ -305,6 +436,9 @@ function Cart() {
       // Add to Redux order state (for order tracking)
       dispatch(addToOrder(cart));
       
+      // Send SMS notification for Stripe payment
+      await sendOrderSMS('stripe');
+      
       // Initiate Stripe payment
       await createCheckoutSession();
       
@@ -317,7 +451,7 @@ function Cart() {
     }
   };
 
-  // FIREBASE-ONLY CHECKOUT (Your existing functionality)
+  // FIREBASE-ONLY CHECKOUT (Your existing functionality) - Enhanced with SMS
   const onDirectFirebaseCheckout = async () => {
     if (!user.isLoggedIn) {
       alert("Please login to place order");
@@ -362,7 +496,7 @@ function Cart() {
           paymentStatus: "cash_on_delivery", // Mark as COD
           paymentMethod: "direct_order",
           purchasedAt: serverTimestamp(),
-          deliveryAddress: user.address || "Not provided"
+          deliveryAddress: `${user.user?.street || user.street || ''}, ${user.user?.addressline1 || user.addressline1 || ''}, ${user.user?.addressline2 || user.addressline2 || ''}, ${user.user?.area || user.area || ''}, ${user.user?.city || user.city || ''}, ${user.user?.state || user.state || ''}, ${user.user?.pincode || user.pincode || ''}`.replace(/^,+|,+$/g, '').replace(/,+/g, ', ') || "Not provided"
         };
 
         // Add to order creation promises
@@ -384,8 +518,12 @@ function Cart() {
       dispatch(resetCart());
       await clearFirebaseCart();
 
-      const orderIds = orderRefs.map(ref => ref.id).join(", ");
-      alert(`Orders placed successfully! Stock updated. Order IDs: ${orderIds}`);
+      const orderIds = orderRefs.map(ref => ref.id);
+      
+      // Send SMS notification for Cash on Delivery
+      await sendOrderSMS('direct', orderIds);
+      
+      alert(`Orders placed successfully! Stock updated. Order IDs: ${orderIds.join(", ")}`);
       
       // Redirect to orders page
       setTimeout(() => {
