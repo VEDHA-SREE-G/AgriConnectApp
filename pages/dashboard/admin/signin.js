@@ -17,15 +17,15 @@ function Signin() {
   const [password, setPassword] = useState("");
   const [admin, setAdmin] = useState(null);
   
-  // OTP related states
+  // OTP related states - using exact same structure as regular signin
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [otp, setOtp] = useState("");
   const [generatedOtp, setGeneratedOtp] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState(""); // This will be fetched from Firebase
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [isOtpSending, setIsOtpSending] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [otpTimer, setOtpTimer] = useState(0);
-  const [userDataFetched, setUserDataFetched] = useState(null); // Store fetched user data
+  const [userDataFetched, setUserDataFetched] = useState(null);
   
   const router = useRouter();
   const dispatch = useDispatch();
@@ -109,7 +109,6 @@ function Signin() {
             
             // Find the Google translate combo box
             const googleSelect = document.querySelector('.goog-te-combo');
-            console.log('Google Select found:', googleSelect);
             
             if (googleSelect) {
               // Remove existing custom dropdown if any
@@ -131,7 +130,7 @@ function Signin() {
                 right: ${window.innerWidth - rect.right}px;
                 z-index: 9999;
                 background: white;
-               border: 2px solid #004e16;
+                border: 2px solid #004e16;
                 border-radius: 12px;
                 box-shadow: 0 10px 30px rgba(0,0,0,0.3);
                 padding: 8px 0;
@@ -172,7 +171,6 @@ function Signin() {
                 
                 // Click handler
                 optionDiv.addEventListener('click', () => {
-                  console.log('Language selected:', option.value);
                   googleSelect.value = option.value;
                   
                   // Trigger change event on Google Select
@@ -206,7 +204,6 @@ function Signin() {
               }, 100);
               
             } else {
-              console.log('Google Translate not ready yet, retrying...');
               setTimeout(() => {
                 mobileTranslateBtn.click();
               }, 500);
@@ -294,7 +291,7 @@ function Signin() {
         },
         body: JSON.stringify({
           to: phoneNumber,
-          message: `Your AgriConnect verification code is: ${newOtp}. This code will expire in 5 minutes. Please do not share this code with anyone.`
+          message: `Your AgriConnect Admin verification code is: ${newOtp}. This code will expire in 5 minutes. Please do not share this code with anyone.`
         })
       });
 
@@ -442,7 +439,7 @@ function Signin() {
         return;
       }
 
-      // For regular users, implement OTP verification
+      // For regular users, implement OTP verification using exact same flow as regular signin
       try {
         // First, fetch user data to get phone number
         console.log("Fetching user data for OTP verification...");
@@ -452,6 +449,15 @@ function Signin() {
           toast.error("Phone number not found for this account. Please contact support.", {
             position: "bottom-right",
             autoClose: 5000,
+          });
+          return;
+        }
+
+        // Check if user is a farmer (only farmers can access admin dashboard)
+        if (userData.role !== "farmer") {
+          toast.error("Access denied. Only farmers can access this dashboard.", {
+            position: "bottom-right",
+            autoClose: 3000,
           });
           return;
         }
@@ -577,7 +583,7 @@ function Signin() {
               </div>
             )}
 
-            {/* OTP Input Section */}
+            {/* OTP Input Section - using exact same structure as regular signin */}
             {showOtpInput && (
               <div style={{ marginTop: '10px' }}>
                 <div style={{ 
@@ -763,9 +769,9 @@ function Signin() {
           cursor: pointer;
           border-radius: 10px;
           background: #f4f8f6;
-         border: 2px solid #004e16;
+          border: 2px solid #004e16;
           color: #004e16;
-        box-shadow: 0 4px 15px rgba(70, 181, 127, 0.4);
+          box-shadow: 0 4px 15px rgba(70, 181, 127, 0.4);
           position: relative;
         }
 
@@ -796,12 +802,12 @@ function Signin() {
         }
 
         .custom-mobile-dropdown::-webkit-scrollbar-thumb {
-         background: #46b57f;
+          background: #46b57f;
           border-radius: 3px;
         }
 
         .custom-mobile-dropdown::-webkit-scrollbar-thumb:hover {
-         background: #004e16;
+          background: #004e16;
         }
 
         /* Custom scrollbar for mobile dropdown */
@@ -837,6 +843,7 @@ function Signin() {
           font-weight: bold;
           text-align: center;
           margin: 10px 0;
+          font-size: 14px;
         }
 
         .otp-buttons {
@@ -847,6 +854,61 @@ function Signin() {
 
         .otp-buttons button {
           flex: 1;
+        }
+
+        /* Enhanced OTP Container Styling */
+        .otp-container input {
+          border: 2px solid #46b57f !important;
+          background: white !important;
+        }
+
+        .otp-container input:focus {
+          border-color: #004e16 !important;
+          box-shadow: 0 0 0 3px rgba(70, 181, 127, 0.2) !important;
+        }
+
+        /* Responsive design for OTP section */
+        @media (max-width: 768px) {
+          .otp-container {
+            padding: 15px;
+          }
+          
+          .otp-buttons {
+            flex-direction: column;
+            gap: 8px;
+          }
+          
+          .otp-buttons button {
+            width: 100%;
+          }
+        }
+
+        /* Loading state for buttons */
+        button:disabled {
+          cursor: not-allowed !important;
+          opacity: 0.6 !important;
+        }
+
+        /* Success state styling */
+        .verification-success {
+          background: linear-gradient(135deg, #46b57f, #004e16);
+          color: white;
+          padding: 15px;
+          border-radius: 8px;
+          text-align: center;
+          margin: 10px 0;
+          animation: fadeInScale 0.3s ease-out;
+        }
+
+        /* Error state styling for OTP input */
+        .otp-error {
+          border-color: #dc3545 !important;
+          background-color: #fff5f5 !important;
+        }
+
+        .otp-error:focus {
+          border-color: #dc3545 !important;
+          box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.2) !important;
         }
       `}</style>
     </>
